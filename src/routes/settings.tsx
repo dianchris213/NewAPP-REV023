@@ -428,26 +428,20 @@ export function FundSourceSheet({ onClose }: { onClose: () => void }) {
       );
   }, [wallets, query, typeFilter]);
 
-  // A restored filter must never silently hide fund sources on open: any
-  // persisted filter that would hide at least one wallet is dropped once,
-  // right after hydration, so the sheet always opens on the full list.
-  const staleFilterChecked = useRef(false);
+  // Reactive stale filter check: automatically resets filters if they hide all or some items incorrectly
   useEffect(() => {
-    if (!hydrated || !queryRestored || !typeRestored || staleFilterChecked.current) return;
-    staleFilterChecked.current = true;
+    if (!hydrated || !queryRestored || !typeRestored) return;
     const q = query.trim().toLowerCase();
     const visible = wallets.filter(
       (w) =>
         (typeFilter === "all" ? true : w.type === typeFilter) &&
         (q ? w.name.toLowerCase().includes(q) : true),
     ).length;
-    if (visible < wallets.length) {
+    if (wallets.length > 0 && visible < wallets.length) {
       resetTypeFilter();
       resetQuery();
     }
-    // Runs once, right after the persisted filter is restored.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hydrated, queryRestored, typeRestored]);
+  }, [hydrated, queryRestored, typeRestored, wallets, typeFilter, query]);
 
   const hiddenCount = wallets.length - list.length;
   const filtersReady = queryRestored && typeRestored;
@@ -464,7 +458,6 @@ export function FundSourceSheet({ onClose }: { onClose: () => void }) {
     e.preventDefault();
     if (walletPending.add) return;
     const trimmed = name.trim().replace(/\s+/g, " ");
-    // Fund sources are unique per type; the same name may exist under another type.
     const duplicate = wallets.some(
       (w) => w.type === type && w.name.toLowerCase() === trimmed.toLowerCase(),
     );
@@ -475,8 +468,6 @@ export function FundSourceSheet({ onClose }: { onClose: () => void }) {
     }
     const result = await addWallet({ name: trimmed, type, balance: 0 });
     if (!result.ok) {
-      // API/transport failures keep the typed name so the user can retry
-      // without re-entering anything; focus returns to the field.
       if (result.reason === "api") {
         setError(copy.fundSourceSaveFailed);
         setStatus(copy.fundSourceSaveFailed);
@@ -487,14 +478,11 @@ export function FundSourceSheet({ onClose }: { onClose: () => void }) {
         setError(copy.invalidFundSource);
         announce(copy.invalidFundSource, false);
       }
-      // Re-enable happens on the next tick; focus once the field is enabled.
       window.setTimeout(() => nameRef.current?.focus(), 0);
       return;
     }
     setName("");
     setError(undefined);
-    // Clear active search/type filters so the freshly created fund source is
-    // always visible in the list below instead of being filtered out.
     if (filtersDirty) resetFilters();
     announce(copy.fundSourceAdded, true);
   };
