@@ -671,6 +671,17 @@ export function FundSourceSheet({ onClose }: { onClose: () => void }) {
           </div>
         ) : null}
 
+        {wallets.length && filtersReady && hiddenCount > 0 ? (
+          <p
+            role="status"
+            aria-live="polite"
+            data-testid="fund-source-filter-summary"
+            className="mt-2 m-0 rounded-2xl bg-surface-container px-4 py-2 text-[11px] font-semibold text-on-surface-variant"
+          >
+            {`${list.length}/${wallets.length} · ${copy.resetFilter}`}
+          </p>
+        ) : null}
+
         {!hydrated ? (
           <div className="mt-4 rounded-2xl bg-surface-container px-4 py-2">
             <ListSkeleton rows={3} label={copy.loadingFundSources} testId="fund-source-skeleton" />
