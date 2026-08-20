@@ -398,12 +398,14 @@ export function FundSourceSheet({ onClose }: { onClose: () => void }) {
   const [editingName, setEditingName] = useState("");
   const [rowError, setRowError] = useState<{ id: string; message: string } | null>(null);
   const [status, setStatus] = useState("");
-  const [query, setQuery, resetQuery] = usePersistentState<string>(FS_QUERY_KEY, "", isString);
-  const [typeFilter, setTypeFilter, resetTypeFilter] = usePersistentState<WalletType | "all">(
-    FS_TYPE_KEY,
-    "all",
-    isTypeFilter,
+  const [query, setQuery, resetQuery, queryRestored] = usePersistentState<string>(
+    FS_QUERY_KEY,
+    "",
+    isString,
   );
+  const [typeFilter, setTypeFilter, resetTypeFilter, typeRestored] = usePersistentState<
+    WalletType | "all"
+  >(FS_TYPE_KEY, "all", isTypeFilter);
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const [undoTarget, setUndoTarget] = useState<Wallet | null>(null);
   const nameRef = useRef<HTMLInputElement | null>(null);
@@ -425,6 +427,17 @@ export function FundSourceSheet({ onClose }: { onClose: () => void }) {
           a.name.localeCompare(b.name),
       );
   }, [wallets, query, typeFilter]);
+
+  // A restored filter must never silently hide every fund source: a stale type
+  // filter that matches nothing is dropped, and any remaining hidden rows are
+  // announced with an explicit, resettable summary.
+  useEffect(() => {
+    if (!hydrated || !typeRestored || typeFilter === "all") return;
+    if (!wallets.some((w) => w.type === typeFilter)) resetTypeFilter();
+  }, [hydrated, typeRestored, typeFilter, wallets, resetTypeFilter]);
+
+  const hiddenCount = wallets.length - list.length;
+  const filtersReady = queryRestored && typeRestored;
 
   const confirmTarget = confirmId ? (wallets.find((w) => w.id === confirmId) ?? null) : null;
 
