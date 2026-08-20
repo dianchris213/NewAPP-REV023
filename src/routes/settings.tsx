@@ -431,10 +431,14 @@ export function FundSourceSheet({ onClose }: { onClose: () => void }) {
   // A restored filter must never silently hide every fund source: a stale type
   // filter that matches nothing is dropped, and any remaining hidden rows are
   // announced with an explicit, resettable summary.
+  const staleFilterChecked = useRef(false);
   useEffect(() => {
-    if (!hydrated || !typeRestored || typeFilter === "all") return;
-    if (!wallets.some((w) => w.type === typeFilter)) resetTypeFilter();
-  }, [hydrated, typeRestored, typeFilter, wallets, resetTypeFilter]);
+    if (!hydrated || !typeRestored || staleFilterChecked.current) return;
+    staleFilterChecked.current = true;
+    if (typeFilter !== "all" && !wallets.some((w) => w.type === typeFilter)) resetTypeFilter();
+    // Runs once, right after the persisted filter is restored.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hydrated, typeRestored]);
 
   const hiddenCount = wallets.length - list.length;
   const filtersReady = queryRestored && typeRestored;
