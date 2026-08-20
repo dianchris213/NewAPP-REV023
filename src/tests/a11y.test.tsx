@@ -137,7 +137,9 @@ describe("Accessibility — delete confirmation dialog", () => {
   it("returns focus to the triggering row action on cancel", async () => {
     const { user, opener } = await openDialog();
     await user.keyboard("{Escape}");
-    await waitFor(() => expect(screen.queryByTestId("fund-source-confirm")).not.toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.queryByTestId("fund-source-confirm")).not.toBeInTheDocument(),
+    );
     await waitFor(() => expect(opener).toHaveFocus());
   });
 });

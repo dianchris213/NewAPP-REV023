@@ -711,7 +711,6 @@ export function FundSourceSheet({ onClose }: { onClose: () => void }) {
                       >
                         {WALLET_TYPE_LABEL[w.type]}
                       </li>
-
                     ) : null}
                     <li
                       key={w.id}
