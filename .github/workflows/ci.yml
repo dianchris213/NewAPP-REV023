@@ -30,7 +30,18 @@ jobs:
         run: bun run typecheck
 
       - name: Unit + UI tests (Vitest)
-        run: bun run test
+        run: bun run test --reporter=default --reporter=json --outputFile=test-report/vitest-report.json
+
+      - name: Upload visual regression snapshots + diff report
+        if: always() && github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-regression-${{ github.event.pull_request.number }}
+          path: |
+            src/tests/__snapshots__/**
+            test-report/**
+          if-no-files-found: warn
+          retention-days: 14
 
       - name: Production build
         run: bun run build
