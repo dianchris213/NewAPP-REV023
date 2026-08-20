@@ -146,3 +146,37 @@ Behaviour once enabled:
 - `initMonitoring()` boots Sentry in the browser only, with PII scrubbing (`beforeSend`) so no financial data leaves the device.
 - `captureApiError(error, { operation, status })` creates one stable issue per operation + status (fingerprint `["api", operation, status]`) and tags `api.operation`, `api.status`, `api.severity`.
 - Severity routing (`severityForStatus`): `4xx → warning`, `5xx → error`, unknown/transport → `fatal`. Configure Sentry alert rules on `level` or the `api.severity` tag (e.g. page on `fatal`, alert on `error`, digest `warning`).
+
+## A11y tests (REV022)
+
+- `src/tests/a11y.test.tsx` — axe-core scan (`axe-core`, jsdom) on the Sumber Dana sheet and the delete/undo flow: no serious/critical violations, `role="dialog"`/`aria-modal`, focus-trap, `aria-live` status announcements.
+- `src/tests/undo-after-api-error.test.tsx` — failure → retry → delete → undo cycle keeps the typed input and focus correct.
+- Run only the accessibility layer:
+
+```sh
+bunx vitest run src/tests/a11y.test.tsx
+bunx vitest run src/tests/undo-after-api-error.test.tsx
+```
+
+ESLint (`bun run lint`) also enforces `eslint-plugin-jsx-a11y`, so A11y regressions fail CI before the tests run.
+
+## Sentry source map upload (CI env)
+
+`@sentry/vite-plugin` uploads source maps during `bun run build` when all three variables are present; without them the build simply skips the upload.
+
+```sh
+SENTRY_AUTH_TOKEN=sntrys_...   # token with project:releases + org:read scope (secret)
+SENTRY_ORG=your-org-slug
+SENTRY_PROJECT=your-project-slug
+```
+
+Add them as GitHub repository secrets (Settings → Secrets and variables → Actions) and expose them to the build step in `.github/workflows/ci.yml`. Never commit the token; rotate it if it leaks.
+
+## Reading the snapshot artifact in a PR
+
+Every pull-request run uploads `visual-regression-<PR number>` with `if: always()`, so it exists even when the test step fails.
+
+1. Open the PR → **Checks** → job **verify**.
+2. Scroll to **Artifacts** and download `visual-regression-<PR number>`.
+3. It contains `src/tests/__snapshots__/**` (committed layout contracts) and `test-report/vitest-report.json` (the Vitest diff report — failed assertions include the expected/received snapshot diff).
+4. If the diff is an intentional design change, run `bunx vitest run -u` locally and commit the updated snapshot; otherwise fix the component.
